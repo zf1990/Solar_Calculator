@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection.Metadata;
 using Domain;
+using Microsoft.EntityFrameworkCore;
 
 namespace Application.Core
 {
@@ -9,6 +11,28 @@ namespace Application.Core
     {
         private readonly double _Longitude;
         private readonly double _Latitude;
+
+        private Dictionary<string, double> _Boundaries;
+
+        public Dictionary<string, double> Boundaries
+        {
+            get
+            {
+                if (_Boundaries == null)
+                {
+                    _Boundaries = new Dictionary<string, double>
+                    {
+                        { "East", EastLongitudeBoundaryDeg },
+                        { "West", WestLongitudeBoundaryDeg },
+                        { "South", SouthLatitudeBoundaryDeg },
+                        { "North", NorthLatitudeBoundaryDeg }
+                    };
+                }
+                return _Boundaries;
+
+            }
+        }
+
 
         private double EastLongitudeBoundaryDeg;
         private double WestLongitudeBoundaryDeg;
@@ -22,14 +46,14 @@ namespace Application.Core
         public WeatherStationSelector(double Longitude, double Latitude, double MaxDistanceInKm = 100)
         {
             this._MaxDistanceInKm = MaxDistanceInKm;
-            if (Longitude >= -180 && Longitude <= 180 && Latitude >= -90 && Latitude <= 90)
+            if (Longitude >= -180 && Longitude <= 180 && Latitude >= -89.5 && Latitude <= 89.5)
             {
                 _Latitude = Latitude;
                 _Longitude = Longitude;
             }
             else
             {
-                throw new Exception("Latitude and Longitude must be valid values!");
+                throw new Exception("Latitude and Longitude must be valid values and cannot be located that close to the pole!");
             }
 
             CalculateBoundaries();
@@ -38,10 +62,9 @@ namespace Application.Core
         //Limit the 
         public void CalculateBoundaries()
         {
-            //Use haversine formula
 
             //Calculating the upper and lower boundary for the latitude
-            //For simplicity, assume 1 degree latitude = 111 km.
+            //For simplicity, assume 1 degree latitude will always be 111.133 km.
             NorthLatitudeBoundaryDeg = _Latitude + _MaxDistanceInKm / 111.133;
             SouthLatitudeBoundaryDeg = _Latitude - _MaxDistanceInKm / 111.133;
 
@@ -80,9 +103,14 @@ namespace Application.Core
 
         public double GetLongitudeDegreeDifference()
         {
-            double leftExpression = Math.Asin(Math.Sqrt(Math.Pow(Math.Sin(_MaxDistanceInKm / EarthRadiusKm / 2), 2) / Math.Pow(Math.Cos(DegToRad(_Latitude)), 2)));
+            double leftExpression = Math.Asin(
+                Math.Sqrt(
+                    Math.Pow(Math.Sin(_MaxDistanceInKm / EarthRadiusKm / 2), 2)
+                    / Math.Pow(Math.Cos(DegToRad(_Latitude)), 2)
+                    )
+                );
             double leftExpressionDeg = RadToDeg(leftExpression);
-            return leftExpressionDeg * 2 + _Longitude;
+            return leftExpressionDeg * 2;
         }
 
         public double DegToRad(double degree)
