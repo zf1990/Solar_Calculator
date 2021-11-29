@@ -13,6 +13,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using Persistence;
+using Persistence.Models;
 
 
 namespace API
@@ -44,7 +45,7 @@ namespace API
             });
             services.AddDbContext<DataContext>(opt =>
             {
-                opt.UseSqlite(_config.GetConnectionString("DefaultConnection"));
+                opt.UseSqlServer(_config.GetConnectionString("DefaultConnection"));
             });
         }
 
@@ -55,8 +56,6 @@ namespace API
             {
                 app.UseDeveloperExceptionPage();
             }
-
-            //app.UseHttpsRedirection();
 
             app.UseRouting();
 
