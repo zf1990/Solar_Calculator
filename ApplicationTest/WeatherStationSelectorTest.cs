@@ -7,18 +7,20 @@ using System.Reflection;
 using Application.Core;
 using System.Linq.Expressions;
 using System.ComponentModel;
+using Persistence.Models;
 
 namespace WeatherStationSelectorTest
 {
     [TestClass]
     public class WeatherStationSelectorTest
     {
+        DataContext context = new DataContext();
 
         [TestMethod]
         [ExpectedException(typeof(Exception))]
         public void Test_Invalid_Inputs()
         {
-            WeatherStationSelector selector = new WeatherStationSelector(-93.18108, 190);
+            WeatherStationSelector selector = new WeatherStationSelector(context, -93.18108, 190);
         }
 
         [TestMethod]
@@ -32,7 +34,7 @@ namespace WeatherStationSelectorTest
             //39.9042
             //116.4074
 
-            WeatherStationSelector selector = new WeatherStationSelector(-93.18108, 45.19775);
+            WeatherStationSelector selector = new WeatherStationSelector(context, -93.18108, 45.19775);
             double distance = selector.CalculateDistanceToPoint(116.4074, 39.9042);
             Console.WriteLine(distance);
             Assert.IsTrue(distance >= 9995 && distance <= 10197);
@@ -45,7 +47,7 @@ namespace WeatherStationSelectorTest
             //45.19775N
             //-93.18108
 
-            WeatherStationSelector selector = new WeatherStationSelector(-93.18108, 45.19775, 50);
+            WeatherStationSelector selector = new WeatherStationSelector(context, -93.18108, 45.19775, 50);
             selector.CalculateBoundaries();
 
 
@@ -64,7 +66,7 @@ namespace WeatherStationSelectorTest
             //45.19775N
             //-93.18108
 
-            WeatherStationSelector selector = new WeatherStationSelector(-93.18108, 45.19775, 160);
+            WeatherStationSelector selector = new WeatherStationSelector(context, -93.18108, 45.19775, 160);
             selector.CalculateBoundaries();
 
             double EastBoundary = selector.Boundaries["East"];

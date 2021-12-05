@@ -1,10 +1,11 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Persistence.Models;
 
 #nullable disable
 
-namespace Persistence.Models
+namespace Persistence
 {
     public partial class DataContext : DbContext
     {
@@ -17,7 +18,8 @@ namespace Persistence.Models
         {
         }
 
-        public virtual DbSet<WeatherStationInformation> WeatherStationInformations { get; set; }
+        public virtual DbSet<WeatherDatum> WeatherData { get; set; }
+        public virtual DbSet<WeatherStation> WeatherStations { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -32,13 +34,22 @@ namespace Persistence.Models
         {
             modelBuilder.HasAnnotation("Relational:Collation", "SQL_Latin1_General_CP1_CI_AS");
 
-            modelBuilder.Entity<WeatherStationInformation>(entity =>
+            modelBuilder.Entity<WeatherDatum>(entity =>
             {
-                entity.HasKey(e => new { e.Longitude, e.Latitude, e.Date });
-
-                entity.ToTable("WeatherStationInformation");
+                entity.HasKey(e => new { e.WeatherStationId, e.Date });
 
                 entity.Property(e => e.Date).HasColumnType("datetime");
+
+                entity.HasOne(d => d.WeatherStation)
+                    .WithMany(p => p.WeatherData)
+                    .HasForeignKey(d => d.WeatherStationId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_WeatherData_WeahterStation");
+            });
+
+            modelBuilder.Entity<WeatherStation>(entity =>
+            {
+                entity.HasIndex(e => new { e.Longitude, e.Latitude }, "IX_COORDINATES");
 
                 entity.Property(e => e.Name)
                     .IsRequired()

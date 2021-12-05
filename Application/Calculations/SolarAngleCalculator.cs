@@ -27,9 +27,6 @@ namespace Application.Calculations
 
         private int GetDayOfTheYear(DateTime date)
         {
-            if (date == null)
-                throw new Exception("The date cannot be null.");
-
             return date.DayOfYear;
         }
 
@@ -39,7 +36,7 @@ namespace Application.Calculations
             if (n > 366 || n < 1)
                 throw new Exception("The day is invalid");
 
-            Eo = _Esc * (1 + 0.033 * Math.Cos(2 * Math.PI * (n - 3) / 365));
+            Eo = _Esc * (1 + 0.033 * MathTools.Cosine(360 * (n - 3) / 365));
         }
 
         //n is the day of the year

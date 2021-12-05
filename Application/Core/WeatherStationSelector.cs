@@ -1,13 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection.Metadata;
+using Application.Calculations;
 using Domain;
 using Microsoft.EntityFrameworkCore;
+using Persistence.Models;
 
 namespace Application.Core
 {
 
-    public class WeatherStationSelector
+    public class WeatherStationSelector : BaseProcessor
     {
         private readonly double _Longitude;
         private readonly double _Latitude;
@@ -43,7 +45,7 @@ namespace Application.Core
 
         private const double EarthRadiusKm = 6371.0;
 
-        public WeatherStationSelector(double Longitude, double Latitude, double MaxDistanceInKm = 100)
+        public WeatherStationSelector(DataContext Context, double Longitude, double Latitude, double MaxDistanceInKm = 100) : base(Context)
         {
             this._MaxDistanceInKm = MaxDistanceInKm;
             if (Longitude >= -180 && Longitude <= 180 && Latitude >= -89.5 && Latitude <= 89.5)
@@ -59,7 +61,7 @@ namespace Application.Core
             CalculateBoundaries();
         }
 
-        //Limit the 
+
         public void CalculateBoundaries()
         {
 
@@ -77,8 +79,7 @@ namespace Application.Core
         {
             if (IsDegree)
             {
-                double radian = DegToRad(angle);
-                return Math.Pow(Math.Sin(radian / 2), 2);
+                return Math.Pow(MathTools.Sine(angle / 2), 2);
             }
             else
             {
@@ -89,13 +90,11 @@ namespace Application.Core
 
         public double CalculateDistanceToPoint(double AnotherLongitudeDeg, double AnotherLatitudeDeg)
         {
-            double AnotherLatitudeRad = DegToRad(AnotherLatitudeDeg);
-            double LatitudeRad = DegToRad(_Latitude);
             double d = 2 * EarthRadiusKm *
                     Math.Asin(
                         Math.Sqrt(
                             CalculateHaversineFunction(AnotherLatitudeDeg - _Latitude)
-                            + Math.Cos(LatitudeRad) * Math.Cos(AnotherLatitudeRad) * CalculateHaversineFunction(AnotherLongitudeDeg - _Longitude)
+                            + MathTools.Cosine(AnotherLatitudeDeg) * MathTools.Cosine(_Latitude) * CalculateHaversineFunction(AnotherLongitudeDeg - _Longitude)
                         )
                     );
             return d;
@@ -103,25 +102,16 @@ namespace Application.Core
 
         public double GetLongitudeDegreeDifference()
         {
-            double leftExpression = Math.Asin(
+            double leftExpression = MathTools.ASine(
                 Math.Sqrt(
                     Math.Pow(Math.Sin(_MaxDistanceInKm / EarthRadiusKm / 2), 2)
-                    / Math.Pow(Math.Cos(DegToRad(_Latitude)), 2)
+                    / Math.Pow(MathTools.Cosine(_Latitude), 2)
                     )
                 );
-            double leftExpressionDeg = RadToDeg(leftExpression);
-            return leftExpressionDeg * 2;
+
+            return leftExpression * 2;
         }
 
-        public double DegToRad(double degree)
-        {
-            return degree / 180.0 * Math.PI;
-        }
-
-        public double RadToDeg(double radian)
-        {
-            return radian / Math.PI * 180.0;
-        }
 
 
     }
