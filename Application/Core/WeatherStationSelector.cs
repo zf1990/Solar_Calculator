@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection.Metadata;
+using System.Security.Cryptography.X509Certificates;
 using Application.Calculations;
 using Domain;
 using Microsoft.EntityFrameworkCore;
+using Persistence;
 using Persistence.Models;
 
 namespace Application.Core
@@ -112,7 +115,17 @@ namespace Application.Core
             return leftExpression * 2;
         }
 
+        public IList<WeatherStation> GetWeatherStations(int NumberToTake)
+        {
+            var results = _Context.WeatherStations.Where(
+                x => x.Longitude > Boundaries["West"] &&
+                x.Longitude < Boundaries["East"] &&
+                x.Latitude < Boundaries["North"] &&
+                x.Latitude > Boundaries["South"])
+                .ToList();
 
+            return results;
+        }
 
     }
 }

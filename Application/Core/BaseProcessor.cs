@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Persistence;
 using Persistence.Models;
 
 namespace Application.Core
