@@ -91,6 +91,8 @@ namespace Application.Core
 
         }
 
+
+
         public double CalculateDistanceToPoint(double AnotherLongitudeDeg, double AnotherLatitudeDeg)
         {
             double d = 2 * EarthRadiusKm *
@@ -115,7 +117,7 @@ namespace Application.Core
             return leftExpression * 2;
         }
 
-        public IList<WeatherStation> GetWeatherStations(int NumberToTake)
+        public IList<WeatherStation> LoadWeatherStations()
         {
             var results = _Context.WeatherStations.Where(
                 x => x.Longitude > Boundaries["West"] &&
@@ -127,5 +129,57 @@ namespace Application.Core
             return results;
         }
 
+        private class Item
+        {
+            public WeatherStation Station;
+            public double distance;
+
+            public Item(WeatherStation Station, double distance)
+            {
+                this.Station = Station;
+                this.distance = distance;
+            }
+        }
+
+        public IList<WeatherStation> SortByDistances(IList<WeatherStation> WeatherStations, int NumberToTake)
+        {
+            List<Item> Items = new List<Item>();
+            foreach (var station in WeatherStations)
+            {
+                double distance = CalculateDistanceToPoint(station.Longitude, station.Latitude);
+                Items.Add(new Item(station, distance));
+            }
+            IList<WeatherStation> SortedWeatherStations = Items
+                                    .OrderBy(x => x.distance)
+                                    .Select(x => x.Station)
+                                    .Take(NumberToTake)
+                                    .ToList();
+
+            return SortedWeatherStations;
+        }
+
+        public WeatherStation GetClosestWeatherStation()
+        {
+            IList<WeatherStation> Stations = SortByDistances(LoadWeatherStations(), 1);
+            return Stations[0];
+        }
+
+        public IList<WeatherStation> GetClosestWeatherStations(int NumberToTake)
+        {
+            IList<WeatherStation> Stations = SortByDistances(LoadWeatherStations(), NumberToTake);
+            return Stations;
+        }
+
+        public WeatherDatum LoadData(int Id)
+        {
+            return _Context.WeatherData.Find(Id);
+        }
+
+        public List<WeatherDatum> LoadData(IEnumerable<int> Ids)
+        {
+            return _Context.WeatherData
+            .Where(x => Ids.Contains(x.WeatherStationId))
+            .ToList();
+        }
     }
 }

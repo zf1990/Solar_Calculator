@@ -8,6 +8,7 @@ using Application.Core;
 using System.Linq.Expressions;
 using System.ComponentModel;
 using Persistence.Models;
+using Persistence;
 
 namespace WeatherStationSelectorTest
 {
