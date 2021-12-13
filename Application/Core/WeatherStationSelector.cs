@@ -147,7 +147,8 @@ namespace Application.Core
             foreach (var station in WeatherStations)
             {
                 double distance = CalculateDistanceToPoint(station.Longitude, station.Latitude);
-                Items.Add(new Item(station, distance));
+                if (distance < _MaxDistanceInKm)
+                    Items.Add(new Item(station, distance));
             }
             IList<WeatherStation> SortedWeatherStations = Items
                                     .OrderBy(x => x.distance)

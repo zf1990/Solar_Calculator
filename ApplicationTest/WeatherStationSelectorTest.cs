@@ -73,10 +73,35 @@ namespace WeatherStationSelectorTest
             double EastBoundary = selector.Boundaries["East"];
             double WestBoundary = selector.Boundaries["West"];
             Console.WriteLine("East Boundary is {0}", EastBoundary);
+
             Console.WriteLine("West Boundary is {0}", WestBoundary);
 
             //East and west boundary should be the values listed.
             Assert.IsTrue(Math.Abs(-91.13869956 - EastBoundary) < 0.01 && Math.Abs(-95.22346044 - WestBoundary) < 0.01);
         }
+
+        [TestMethod]
+        public void Test_For_WeatherStations()
+        {
+            WeatherStationSelector selector = new WeatherStationSelector(context, -93.18108, 45.19775);
+            selector.CalculateBoundaries();
+
+            WeatherStation station = selector.GetClosestWeatherStation();
+            Assert.IsTrue(station.Name.ToUpper().Contains("ANOKA COUNTY"));
+        }
+
+        [TestMethod]
+        public void Test_For_MultipleWeatherStation()
+        {
+            WeatherStationSelector selector = new WeatherStationSelector(context, 118.8, 31.74, 50);
+            var stations = selector.GetClosestWeatherStations(20);
+            foreach (var station in stations)
+            {
+                Console.WriteLine($"Station name is: {station.Name}");
+            }
+            Assert.IsTrue(stations.Count == 1);
+        }
     }
+
+
 }
