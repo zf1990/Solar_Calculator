@@ -91,8 +91,6 @@ namespace Application.Core
 
         }
 
-
-
         public double CalculateDistanceToPoint(double AnotherLongitudeDeg, double AnotherLatitudeDeg)
         {
             double d = 2 * EarthRadiusKm *
