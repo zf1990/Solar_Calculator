@@ -144,7 +144,8 @@ namespace Application.Calculations
             double next = arr[indices[1]];
 
             DateTime previousDate = new DateTime(DateTime.Now.Year, indices[0], 21);
-            DateTime nextDate = new DateTime(DateTime.Now.Year, indices[1], 21);
+            int nextDateYear = previousDate.Month == 12 ? previousDate.Year + 1 : previousDate.Year;
+            DateTime nextDate = new DateTime(nextDateYear, indices[1], 21);
             int totalDays = (nextDate - previousDate).Days;
             int daysPassed = (date - previousDate).Days;
 
