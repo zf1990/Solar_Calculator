@@ -2,6 +2,7 @@
 using Application.Core;
 using Persistence.Models;
 using System;
+using System.Linq;
 
 namespace Application
 {
@@ -21,11 +22,27 @@ namespace Application
 
         public double Calculate()
         {
-            SolarAngleCalculator Calculator = new SolarAngleCalculator(Longtitude: Longtitude, Latitude: Latitude, TauBArr: this.WeatherStaton.WeatherData.)
+            SolarAngleCalculator Calculator = new SolarAngleCalculator(Longitude: Longitude, Latitude: Latitude, TauBArr: GetTauB(), TauDArr: GetTauD());
         }
 
         private void GetClosestWeatherStation() =>        
             WeatherStaton = Selector.GetClosestWeatherStation();
-        
+
+        private double?[] GetTauB()
+        {
+            return this.WeatherStaton.WeatherData
+                .OrderBy(w => w.Date)
+                .Select(w => w.TauB)
+                .ToArray();
+        }
+
+        private double?[] GetTauD()
+        {
+            return this.WeatherStaton.WeatherData
+                .OrderBy(w => w.Date)
+                .Select(w => w.TauD)
+                .ToArray();
+        }
+
     }
 }

@@ -12,8 +12,8 @@ namespace Application.Calculations
         private readonly double _Latitude;
         private readonly double _Longitude;
 
-        public double[] TauBArr { get; set; }
-        public double[] TauDArr { get; set; }
+        public double?[] TauBArr { get; set; }
+        public double?[] TauDArr { get; set; }
 
         private double Declination;
         private double ET; //Equation of Time
@@ -22,7 +22,7 @@ namespace Application.Calculations
         private double ad; //Air mass exponents;
         private double TauB; //Used to calculuate relative air mass
         private double TauD; //Used to calculate relative air mass.
-        public SolarAngleCalculator(double Longitude, double Latitude, double[] TauBArr, double[] TauDArr)
+        public SolarAngleCalculator(double Longitude, double Latitude, double?[] TauBArr, double?[] TauDArr)
         {
             this._Longitude = Longitude;
             this._Latitude = Latitude;
@@ -134,14 +134,14 @@ namespace Application.Calculations
         private void SetAd() =>
             ad = 0.507 + 0.205 * TauB - 0.080 * TauD - 0.190 * TauB * TauD; // Checked
 
-        public double InterpololateValues(double[] arr, DateTime date)
+        public double InterpololateValues(double?[] arr, DateTime date)
         {
             if (date.Day == 21)
-                return arr[date.Month - 1];
+                return arr[date.Month - 1].Value;
 
             int[] indices = GetInterpoloationIndices(date);
-            double previous = arr[indices[0]];
-            double next = arr[indices[1]];
+            double previous = arr[indices[0]].Value;
+            double next = arr[indices[1]].Value;
 
             DateTime previousDate = new DateTime(DateTime.Now.Year, indices[0], 21);
             int nextDateYear = previousDate.Month == 12 ? previousDate.Year + 1 : previousDate.Year;
