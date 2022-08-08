@@ -12,7 +12,7 @@ using Persistence.Models;
 namespace Application.Core
 {
 
-    public class WeatherStationSelector : BaseProcessor
+    public class WeatherStationSelector : BaseProcessor, IWeatherStationSelector
     {
         private readonly double _Longitude;
         private readonly double _Latitude;
@@ -122,6 +122,7 @@ namespace Application.Core
                 x.Longitude < Boundaries["East"] &&
                 x.Latitude < Boundaries["North"] &&
                 x.Latitude > Boundaries["South"])
+                .Include(w => w.WeatherData)
                 .ToList();
 
             return results;
