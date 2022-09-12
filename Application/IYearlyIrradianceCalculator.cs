@@ -8,6 +8,6 @@ namespace Application
 {
     internal interface IYearlyIrradianceCalculator
     {
-        public double Calculate();
+        public double[,,] Calculate();
     }
 }
