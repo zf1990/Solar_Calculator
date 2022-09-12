@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions;
@@ -35,9 +35,9 @@ namespace Application.Calculations
         /// </summary>
         /// <param name="time"></param>
         /// <returns></returns>
-        public double[] CalculateForDay(DateTime time)
+        public double[][] CalculateForDay(DateTime time)
         {
-            double[] answer = new double[24];
+            double[][] answer = new double[24][]; // 24 entries. Each sub array represent Eb, Ed, and Er.
             int dayOfTheYear = time.DayOfYear;
             CalculateRadiantFlux(dayOfTheYear);
             CalculateEquationOfTime(dayOfTheYear);
@@ -46,12 +46,18 @@ namespace Application.Calculations
             TauD = InterpololateValues(TauDArr, time);
             SetAb();
             SetAd();
-
-            for (int i = 0; i < 24; i++)
+            for(int surfaceAzimuth = -90; surfaceAzimuth <= 90; surfaceAzimuth++)
             {
-                DateTime hour = time.AddHours(i);
-                answer[i] = CalculateSolarIrradiance(hour);
+                for (int tilt = 0; tilt <= 90; tilt++)
+                {
+                    for (int hour = 0; hour < 24; hour++)
+                    {
+                        answer[hour] = CalculateSolarIrradiance(time, tilt, surfaceAzimuth);
+                        time = time.AddHours(1);
+                    }
+                }
             }
+            
             return answer;
         }
 
@@ -60,18 +66,34 @@ namespace Application.Calculations
         /// </summary>
         /// <param name="time"></param>
         /// <returns></returns>
-        public double CalculateSolarIrradiance(DateTime time)
+        public double[] CalculateSolarIrradiance(DateTime time, double tilt, double surfaceAzimuth)
         {
             double AST = CalculateAST(time);
             double hourAngle = CalculateHourAngle(AST); // H
             double solarAltitudeAngle = CalculateSolarAltitudeAngle(hourAngle); // beta
-            double azimuthAngle = CalculateSolarAzimuth(hourAngle, solarAltitudeAngle); //Azimuth
+            double solarAzimuthAngle = CalculateSolarAzimuth(hourAngle, solarAltitudeAngle); //Azimuth
+            double surfaceSolarAzimuthAngle = solarAzimuthAngle - surfaceAzimuth; //Gamma
+            double angleOfIncidence = CalculateAngleOfIncidence(solarAltitudeAngle, surfaceSolarAzimuthAngle, tilt); //theta
             double airmass = CalculateRelativeAirMass(solarAltitudeAngle); // m
             double Eb = CalculateClearSkyBeamRadiation(airmass);
             double Ed = CalculateClearSkyDiffuseRadiation(airmass);
-            return Eb + Ed;
+
+            double Er = (Eb*MathTools.Sine(solarAltitudeAngle) + Ed) * 0.2 * (1 + MathTools.Cosine(solarAltitudeAngle)) / 2; // Ground-reflected irradiance. ρg is assumed to be 0.2 for a mixture of ground surfaces.
+            double Etb = Eb * MathTools.Cosine(angleOfIncidence); // Modified Eb.
+            double Y = Math.Max(0.45, 0.55 + 0.437 * MathTools.Cosine(angleOfIncidence) + 0.313 * Math.Pow(MathTools.Cosine(angleOfIncidence), 2)); // Y for diffuse radiation
+            double Etd = Ed * (Y * MathTools.Sine(tilt) + MathTools.Cosine(tilt)); // Diffuse radiation represents the non-direct irradiance being reflected.,
+            return new double[] { Etb, Etd, Er };
         }
 
+        private double CalculateAngleOfIncidence(double solarAltitudeAngle, double surfaceAzimuthAngle, double tilt)
+        {
+            // theta = angle of incidence
+            // beta = solar altitude angle
+            // gamma = surface azimuth angle
+            // sigma tilt = angle between the horizontal surface and the surface of the panel.
+            double cos_theta = MathTools.Cosine(solarAltitudeAngle) * MathTools.Cosine(surfaceAzimuthAngle) * MathTools.Cosine(tilt) + MathTools.Sine(solarAltitudeAngle) * MathTools.Cosine(tilt);
+            return MathTools.ACosine(cos_theta);
+        }
 
         //n is the day of the year;
         private void CalculateRadiantFlux(int n)
