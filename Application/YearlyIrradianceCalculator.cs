@@ -2,14 +2,15 @@
 using Application.Core;
 using Persistence.Models;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Application
 {
-    public class YearlyIrradianceCalculator : IYearlyIrradianceCalculator
+    public class YearlyIrradianceCalculator 
     {
-        public double Latitude { get; }
-        public double Longitude { get; }
+        internal double Latitude { get; }
+        internal double Longitude { get; }
         public IWeatherStationSelector Selector { get; }
         private WeatherStation WeatherStaton { get; set; }
 
@@ -25,20 +26,25 @@ namespace Application
             GetTauD();
         }
 
-        public double[,,] Calculate()
+        public double[,] Calculate(out double max)
         {
-            double[,,] sums = new double[181, 91, 365]; // Each number represent yearly totals
             SolarAngleCalculator Calculator = new SolarAngleCalculator(Longitude: Longitude, Latitude: Latitude, TauBArr: TauB, TauDArr: TauD);
-            DateTime day = new DateTime(2022, 1, 1);
-            for(int i=0; i<365; i++)
+            //Day of the year, tilt, surfaceAzimuth + 90.  REMEMBER to subtract 90 to get the actual azimuth
+            IEnumerable<double[,]> results = Calculator.CalculateForYear();
+            double[,] resultSums = new double[results.First().GetLength(0), results.First().GetLength(1)];
+            max = 0;
+            foreach(var dailyResult in results)
             {
-                double[][] values = Calculator.CalculateForDay(day);
-
-                // Todo: Add unit tests.
-                day = day.AddDays(1);
+                for(int i=0; i<dailyResult.GetLength(0); i++)
+                {
+                    for(int j=0; j<dailyResult.GetLength(1); j++)
+                    {
+                        resultSums[i,j] += dailyResult[i,j];
+                        max = Math.Max(max, resultSums[i, j]);
+                    }
+                }
             }
-
-            return sums;
+            return resultSums;
         }
 
         private void GetClosestWeatherStation() =>        

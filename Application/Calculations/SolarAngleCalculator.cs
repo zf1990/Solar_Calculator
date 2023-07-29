@@ -2,6 +2,7 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions;
+using System.Collections.Concurrent;
 
 namespace Application.Calculations
 {
@@ -31,13 +32,36 @@ namespace Application.Calculations
         }
 
         /// <summary>
+        /// Calculate the total solar energy a single spot receives per year.
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<double[,]> CalculateForYear()
+        {
+            var results = new ConcurrentBag<double[,]>();
+            List<DateTime> dates = new List<DateTime>(365);
+            DateTime time = new DateTime(DateTime.Now.Year, 1, 1, 12, 0, 0);
+            for(int i=0; i<dates.Count; i++)
+            {
+                dates.Add(time);
+                time.AddDays(1);
+            }
+
+            Parallel.ForEach(dates, date =>
+            {
+                results.Add(CalculateForDay(date));
+            });
+
+            return results;
+        }
+
+        /// <summary>
         /// Calcululate Solar the total solar energy on a clear sky day.
         /// </summary>
         /// <param name="time"></param>
         /// <returns></returns>
-        public double[][] CalculateForDay(DateTime time)
+        internal double[,] CalculateForDay(DateTime time)
         {
-            double[][] answer = new double[24][]; // 24 entries. Each sub array represent Eb, Ed, and Er.
+            double[,] answer = new double[91, 181]; // 24 entries. Each sub array represent Eb, Ed, and Er.
             int dayOfTheYear = time.DayOfYear;
             CalculateRadiantFlux(dayOfTheYear);
             CalculateEquationOfTime(dayOfTheYear);
@@ -46,15 +70,18 @@ namespace Application.Calculations
             TauD = InterpololateValues(TauDArr, time);
             SetAb();
             SetAd();
+            // 0 is facing south. Therefore, this is going from east to west.
             for(int surfaceAzimuth = -90; surfaceAzimuth <= 90; surfaceAzimuth++)
             {
                 for (int tilt = 0; tilt <= 90; tilt++)
                 {
+                    double sum = 0.0;
                     for (int hour = 0; hour < 24; hour++)
                     {
-                        answer[hour] = CalculateSolarIrradiance(time, tilt, surfaceAzimuth);
+                        sum += CalculateSolarIrradiance(time, tilt, surfaceAzimuth);
                         time = time.AddHours(1);
                     }
+                    answer[tilt,surfaceAzimuth + 90] = sum;
                 }
             }
             
@@ -66,7 +93,7 @@ namespace Application.Calculations
         /// </summary>
         /// <param name="time"></param>
         /// <returns></returns>
-        public double[] CalculateSolarIrradiance(DateTime time, double tilt, double surfaceAzimuth)
+        public double CalculateSolarIrradiance(DateTime time, double tilt, double surfaceAzimuth)
         {
             double AST = CalculateAST(time);
             double hourAngle = CalculateHourAngle(AST); // H
@@ -82,7 +109,7 @@ namespace Application.Calculations
             double Etb = Eb * MathTools.Cosine(angleOfIncidence); // Modified Eb.
             double Y = Math.Max(0.45, 0.55 + 0.437 * MathTools.Cosine(angleOfIncidence) + 0.313 * Math.Pow(MathTools.Cosine(angleOfIncidence), 2)); // Y for diffuse radiation
             double Etd = Ed * (Y * MathTools.Sine(tilt) + MathTools.Cosine(tilt)); // Diffuse radiation represents the non-direct irradiance being reflected.,
-            return new double[] { Etb, Etd, Er };
+            return Etb + Etd + Er;
         }
 
         private double CalculateAngleOfIncidence(double solarAltitudeAngle, double surfaceAzimuthAngle, double tilt)
@@ -96,67 +123,67 @@ namespace Application.Calculations
         }
 
         //n is the day of the year;
-        private void CalculateRadiantFlux(int n)
+        internal void CalculateRadiantFlux(int n)
         {
             Eo = _Esc * (1 + 0.033 * MathTools.Cosine(360 * (n - 3) / 365));
         }
 
         //n is the day of the year
-        private void CalculateEquationOfTime(int n)
+        internal void CalculateEquationOfTime(int n)
         {
             double angle = 360 * (n - 1) / 365;
             ET = 2.2918 * (0.0075 + 0.1868 * MathTools.Cosine(angle) - 3.2077 * MathTools.Sine(angle) - 1.4615 * MathTools.Cosine(2 * angle) - 4.089 * MathTools.Sine(2 * angle));
         }
 
         //LST means Local Standard Time
-        private double CalculateAST(DateTime LST)
+        internal double CalculateAST(DateTime LST)
         {
             double LST_hours = LST.Hour + LST.Minute / 60.0;
             double AST = LST_hours + ET / 60.0 + (_Longitude % 15) / 15.0;
             return AST;
         }
 
-        private void CalculateDeclinationAngle(int n) =>
+        internal void CalculateDeclinationAngle(int n) =>
             Declination = 23.45 * MathTools.Sine((n + 284) / 365) * Math.PI / 180;
 
-        private double CalculateHourAngle(double AST) =>
+        internal double CalculateHourAngle(double AST) =>
             15.0 * (AST - 12);
 
         //H is the hour angle
-        private double CalculateSolarAltitudeAngle(double H)
+        internal double CalculateSolarAltitudeAngle(double H)
         {
             double sinBeta = MathTools.Cosine(_Latitude) * MathTools.Cosine(Declination) * MathTools.Cosine(H) + MathTools.Sine(_Latitude) * MathTools.Sine(Declination);
             return MathTools.ASine(sinBeta);
         }
 
-        private double CalculateSolarAzimuth(double H, double beta)
+        internal double CalculateSolarAzimuth(double H, double beta)
         { //H is the hour angle, beta is the solar altitude angle
             double sinOmega = MathTools.Sine(H) * MathTools.Cosine(Declination) / MathTools.Cosine(beta);
             return MathTools.ASine(sinOmega);
         }
 
-        private double CalculateRelativeAirMass(double beta) =>
+        internal double CalculateRelativeAirMass(double beta) =>
             1 / (MathTools.Sine(beta) + 0.50572 * Math.Pow((6.07995 + beta), -1.6364));
 
-        private double CalculateClearSkyBeamRadiation(double m)
+        internal double CalculateClearSkyBeamRadiation(double m)
         {
             double x = -1 * TauB * Math.Pow(m, ab);
             return Eo*Math.Pow(Math.E, x);
         }
 
-        private double CalculateClearSkyDiffuseRadiation(double m)
+        internal double CalculateClearSkyDiffuseRadiation(double m)
         {
             double x = -1 * TauD * Math.Pow(m, ad);
             return Eo * Math.Pow(Math.E, x);
         }
 
-        private void SetAb() =>
+        internal void SetAb() =>
             ab = 1.454 - 0.406 * TauB - 0.268 * TauD + 0.021 * TauB * TauD; // Checked
 
-        private void SetAd() =>
+        internal void SetAd() =>
             ad = 0.507 + 0.205 * TauB - 0.080 * TauD - 0.190 * TauB * TauD; // Checked
 
-        public double InterpololateValues(double?[] arr, DateTime date)
+        internal double InterpololateValues(double?[] arr, DateTime date)
         {
             if (date.Day == 21)
                 return arr[date.Month - 1].Value;
@@ -175,7 +202,7 @@ namespace Application.Calculations
         }
 
         // TODO: Write Unit Test for this.
-        public int[] GetInterpoloationIndices(DateTime date)
+        internal int[] GetInterpoloationIndices(DateTime date)
         {
             // Since the values are 21st of each month
             int month = date.Month;
